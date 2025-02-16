@@ -148,6 +148,11 @@ body {
   border: 2px solid yellow; /* Yellow border for highlighting */
 }
 
+/* Nonattackable Walls */
+.nonattackable-wall {
+  background-color: white;
+}
+
 /* Button Styles */
 /* Style for interactive buttons */
 button {
