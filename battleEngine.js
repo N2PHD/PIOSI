@@ -82,7 +82,10 @@ export class BattleEngine {
     this.enemies.forEach(enemy => {
       if (enemy.symbol === '█') {
         field[enemy.y][enemy.x] = enemy.symbol;
-      }
+    }
+    // Create Nonattackable Wall for level building
+    for (let i = 0; i < this.cols; i++) {
+      field[0][i] = '⬜'; // Nonattackable wall (all white)
     });
     return field;
   }
@@ -94,7 +97,11 @@ export class BattleEngine {
       for (let x = 0; x < this.cols; x++) {
         const cellContent = this.battlefield[y][x];
         let cellClass = '';
-
+        
+        if (cellContent === '⬜') {
+        cellClass += ' nonattackable-wall'; // Add CSS class for nonattackable wall
+      }
+        
         // Dynamically check if the cell content matches any enemy symbol
         const isEnemy = this.enemies.some(
           enemy => enemy.symbol === cellContent
@@ -140,15 +147,16 @@ export class BattleEngine {
     }
   }
 
-  isValidMove(x, y) {
-    return (
-      x >= 0 &&
-      x < this.cols &&
-      y >= 0 &&
-      y < this.rows &&
-      this.battlefield[y][x] === '.'
-    );
-  }
+    isValidMove(x, y) {
+      return (
+        x >= 0 &&
+        x < this.cols &&
+        y >= 0 &&
+        y < this.rows &&
+        this.battlefield[y][x] === '.' &&
+        this.battlefield[y][x] !== '⬜' // Ensure nonattackable wall has collision
+      );
+    }
 
   // Attack (or heal) logic: if an ally is targeted, interpret as healing if the attacker has a heal stat.
   async attackInDirection(dx, dy, unit, recordAttackCallback) {
