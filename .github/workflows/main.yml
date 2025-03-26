@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>piosi 3d</title>
+  <!-- Include the Sono font from Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Sono:wght@200&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Sono', sans-serif;
+      background: linear-gradient(135deg, #222, #444);
+      color: #eee;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 90%;
+      max-width: 800px;
+      text-align: center;
+      padding: 20px;
+    }
+    .active {
+      display: flex;
+    }
+    /* Title Screen */
+    #title-screen {
+      font-size: 2em;
+    }
+    /* Party Selection Screen */
+    #party-select {
+      background: rgba(0,0,0,0.75);
+      border: 2px solid #eee;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    #hero-display {
+      margin: 20px 0;
+      padding: 10px;
+      border: 1px solid #eee;
+      border-radius: 5px;
+    }
+    .hero-info {
+      transition: transform 0.3s;
+    }
+    .hero-info:hover {
+      transform: scale(1.05);
+    }
+    .selected {
+      color: #0f0;
+      font-weight: bold;
+    }
+    /* Dungeon Canvas */
+    canvas {
+      border: 1px solid #333;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <!-- Title Screen -->
+  <div id="title-screen" class="screen active">
+    <h1>Welcome to the Dungeon!</h1>
+    <p>Press Space to Start</p>
+  </div>
+
+  <!-- Party Selection Screen -->
+  <div id="party-select" class="screen">
+    <h2>Select Your Party</h2>
+    <div id="hero-display"></div>
+    <p id="selection-info"></p>
+    <p>
+      Use Left/Right arrows to navigate and Spacebar to select/deselect heroes.<br />
+      Select exactly 3 heroes to proceed.
+    </p>
+  </div>
+
+  <!-- Dungeon Screen -->
+  <div id="dungeon-screen" class="screen">
+    <h2>Dungeon Exploration (Turn-Based)</h2>
+    <p>
+      Arrow Keys: Move the Active Hero<br />
+      Active Hero starts with move points equal to their Agility.<br />
+      When move points hit 0, the turn advances automatically.
+    </p>
+    <canvas id="dungeonCanvas" width="800" height="600"></canvas>
+    <div id="turn-info"></div>
+  </div>
+
+  <script type="module">
+    // 1) Import Heroes from heroes.js
+    import { heroes } from "./heroes.js";
+
+    // 2) GLOBAL STATE & SCREEN MANAGEMENT
+    let currentScreen = "title-screen";
+    let heroIndex = 0;
+    let selectedHeroes = [];
+    let party = []; // Final party array
+    let currentHeroIndex = 0; // Index of the currently active hero in the party
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      currentScreen = screenId;
+      if (screenId === "party-select") {
+        initPartySelection();
+      } else if (screenId === "dungeon-screen") {
+        updateTurnInfo();
+      }
+    }
+
+    // Title Screen: Space moves to party selection
+    document.addEventListener("keydown", (e) => {
+      if (currentScreen === "title-screen" && e.code === "Space") {
+        showScreen("party-select");
+      }
+    });
+
+    // 3) PARTY SELECTION
+    function updateHeroDisplay() {
+      const hero = heroes[heroIndex];
+      document.getElementById("hero-display").innerHTML = `
+        <div class="hero-info ${selectedHeroes.includes(heroIndex) ? 'selected' : ''}">
+          <h3>${hero.name} (${hero.symbol})</h3>
+          <p>HP: ${hero.hp} | Attack: ${hero.attack} | Range: ${hero.range} | Agility: ${hero.agility}</p>
+          <p>${selectedHeroes.includes(heroIndex) ? "SELECTED" : "Press Space to Select"}</p>
+        </div>
+      `;
+      document.getElementById("selection-info").textContent =
+        `Selected Heroes: ${selectedHeroes.length}/3`;
+    }
+
+    function handlePartySelectionKey(e) {
+      if (e.key === "ArrowLeft") {
+        heroIndex = (heroIndex - 1 + heroes.length) % heroes.length;
+        updateHeroDisplay();
+      } else if (e.key === "ArrowRight") {
+        heroIndex = (heroIndex + 1) % heroes.length;
+        updateHeroDisplay();
+      } else if (e.code === "Space") {
+        // Toggle selection
+        if (selectedHeroes.includes(heroIndex)) {
+          selectedHeroes = selectedHeroes.filter(i => i !== heroIndex);
+        } else if (selectedHeroes.length < 3) {
+          selectedHeroes.push(heroIndex);
+        }
+        updateHeroDisplay();
+        if (selectedHeroes.length === 3) {
+          startGame();
+        }
+      }
+    }
+
+    function initPartySelection() {
+      updateHeroDisplay();
+      document.addEventListener("keydown", handlePartySelectionKey);
+    }
+
+    // 4) DUNGEON GENERATION & TURN-BASED MOVEMENT
+    const GRID_SIZE = 25;
+    const TILE_WIDTH = 32;
+    const TILE_HEIGHT = 16;
+    let dungeon = []; // 2D array of "floor" or "wall"
+    let gameStarted = false;
+
+    function generateDungeon() {
+  for (let y = 0; y < GRID_SIZE; y++) {
+    dungeon[y] = [];
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const rand = Math.random();
+      if (rand < 0.65) {
+        dungeon[y][x] = "floor";
+      } else if (rand < 0.85) {
+        dungeon[y][x] = "water"; // 20% chance for water
+      } else {
+        dungeon[y][x] = "wall";
+      }
+    }
+  }
+}
+
+    function findRandomFloor() {
+      let x, y;
+      do {
+        x = Math.floor(Math.random() * GRID_SIZE);
+        y = Math.floor(Math.random() * GRID_SIZE);
+      } while (dungeon[y][x] !== "floor");
+      return { x, y };
+    }
+
+    function placePartyInDungeon() {
+      party.forEach(hero => {
+        const { x, y } = findRandomFloor();
+        hero.x = x;
+        hero.y = y;
+      });
+    }
+
+    // Canvas and context
+    const dungeonCanvas = document.getElementById("dungeonCanvas");
+    const ctx = dungeonCanvas.getContext("2d");
+
+    // Convert grid coordinates to isometric canvas coordinates
+    function toIsometric(gridX, gridY) {
+      const isoX = (gridX - gridY) * (TILE_WIDTH / 2) + dungeonCanvas.width / 2;
+      const isoY = (gridX + gridY) * (TILE_HEIGHT / 2) + 50;
+      return { isoX, isoY };
+    }
+
+    function drawTile(x, y, color) {
+      const { isoX, isoY } = toIsometric(x, y);
+      ctx.beginPath();
+      ctx.moveTo(isoX, isoY);
+      ctx.lineTo(isoX + TILE_WIDTH / 2, isoY + TILE_HEIGHT / 2);
+      ctx.lineTo(isoX, isoY + TILE_HEIGHT);
+      ctx.lineTo(isoX - TILE_WIDTH / 2, isoY + TILE_HEIGHT / 2);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = "#111";
+      ctx.stroke();
+    }
+
+    function drawDungeon() {
+  ctx.clearRect(0, 0, dungeonCanvas.width, dungeonCanvas.height);
+  // Center the camera on the active hero
+  const activeHero = party[currentHeroIndex];
+  const heroIso = toIsometric(activeHero.x, activeHero.y);
+  const cameraOffsetX = heroIso.isoX - dungeonCanvas.width / 2;
+  const cameraOffsetY = heroIso.isoY - dungeonCanvas.height / 2;
+  ctx.save();
+  ctx.translate(-cameraOffsetX, -cameraOffsetY);
+
+  // Draw the dungeon grid
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = dungeon[y][x];
+      let color = "#bbb"; // Default floor color
+      if (cell === "wall") color = "#333";
+      if (cell === "water") color = "#7FFFD4"; // Aquamarine blue
+      drawTile(x, y, color);
+    }
+  }
+
+  // Draw heroes: active hero in red, others in cyan.
+  party.forEach((hero, index) => {
+    if (!hero.alive) return;
+    const { isoX, isoY } = toIsometric(hero.x, hero.y);
+    ctx.fillStyle = (index === currentHeroIndex) ? "#f00" : "#0cf";
+    ctx.font = "16px Sono, sans-serif";
+    ctx.fillText(hero.symbol, isoX - 6, isoY + 6);
+  });
+
+  ctx.restore();
+}
+
+      // Draw heroes: active hero in red, others in cyan.
+      party.forEach((hero, index) => {
+        if (!hero.alive) return;
+        const { isoX, isoY } = toIsometric(hero.x, hero.y);
+        ctx.fillStyle = (index === currentHeroIndex) ? "#f00" : "#0cf";
+        ctx.font = "16px Sono, sans-serif";
+        ctx.fillText(hero.symbol, isoX - 6, isoY + 6);
+      });
+
+      ctx.restore();
+    }
+
+    // Game Loop - now integrates turn-based movement with agility-driven moves.
+    function gameLoop() {
+      drawDungeon();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Advance to the next hero's turn and reset their move points based on agility.
+    function nextTurn() {
+      // Cycle to next hero (skip dead heroes)
+      let found = false;
+      for (let i = 0; i < party.length; i++) {
+        currentHeroIndex = (currentHeroIndex + 1) % party.length;
+        if (party[currentHeroIndex].alive) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        console.log("All heroes are defeated!");
+        return;
+      }
+      // Reset move points for the active hero based on agility.
+      party[currentHeroIndex].movePoints = party[currentHeroIndex].agility;
+      console.log(`It's now ${party[currentHeroIndex].name}'s turn with ${party[currentHeroIndex].movePoints} move points.`);
+      updateTurnInfo();
+    }
+
+    function updateTurnInfo() {
+      document.getElementById("turn-info").textContent =
+        `Active Hero: ${party[currentHeroIndex].name} | Move Points: ${party[currentHeroIndex].movePoints}`;
+    }
+
+    // Initialize the Dungeon, place heroes, and start the game loop.
+    function initDungeon() {
+      gameStarted = true;
+      generateDungeon();
+      placePartyInDungeon();
+      // For the first turn, set move points based on agility for the current hero.
+      party[currentHeroIndex].movePoints = party[currentHeroIndex].agility;
+      gameLoop();
+    }
+
+    // Turn-based movement: control the current hero.
+    // Arrow keys move the active hero if they have move points.
+    document.addEventListener("keydown", (e) => {
+  if (!gameStarted || currentScreen !== "dungeon-screen") return;
+
+  const hero = party[currentHeroIndex];
+  // Do nothing if the hero is not alive
+  if (!hero.alive) return;
+
+  let newX = hero.x;
+  let newY = hero.y;
+
+  switch (e.key) {
+    case "ArrowUp":
+      newY--;
+      break;
+    case "ArrowDown":
+      newY++;
+      break;
+    case "ArrowLeft":
+      newX--;
+      break;
+    case "ArrowRight":
+      newX++;
+      break;
+    default:
+      return;
+  }
+
+  if (
+    newX >= 0 &&
+    newX < GRID_SIZE &&
+    newY >= 0 &&
+    newY < GRID_SIZE &&
+    dungeon[newY][newX] !== "wall"
+  ) {
+    const cellType = dungeon[newY][newX];
+    const moveCost = cellType === "water" ? 2 : 1;
+
+    if (hero.movePoints >= moveCost) {
+      hero.x = newX;
+      hero.y = newY;
+      hero.movePoints -= moveCost;
+      console.log(
+        `${hero.name} moved to (${newX}, ${newY}). Remaining move points: ${hero.movePoints}`
+      );
+      updateTurnInfo();
+    }
+
+    // If no move points remain, advance the turn.
+    if (hero.movePoints <= 0) {
+      nextTurn();
+    }
+  }
+});
+
+    // 5) STARTING THE GAME
+    function startGame() {
+      // Map the selected heroes to party members; assign 100 HP and initialize movePoints later.
+      party = selectedHeroes.map(i => ({
+        ...heroes[i],
+        alive: true,
+        hp: 100
+      }));
+      console.log("Party Selected:", party);
+      document.removeEventListener("keydown", handlePartySelectionKey);
+      showScreen("dungeon-screen");
+      initDungeon();
+    }
+  </script>
+</body>
+</html>
