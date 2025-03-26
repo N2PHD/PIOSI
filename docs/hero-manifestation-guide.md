@@ -27,6 +27,11 @@ Some heroes have special properties that give them unique abilities. Here are so
 - `spicy`: Each "spicy" stat raises the amount the vittle heals for.
 - `caprice`: The hero can randomly boost one of their stats.
 - `fate`: The hero can randomly buff or debuff stats for all heroes.
+- `bulk`: The hero can raise a random stat every time they defeat an enemy.
+- `chain`: The hero can deal chain damage to adjacent enemies.
+- `psych`: The hero can boost ally stats.
+- `ankh`: The hero can provide boosts on hero deaths.
+- `rise`: The hero can revive with HP equal to the rise value.
 
 ## Best Practices
 
@@ -147,6 +152,7 @@ Here are some examples of hero configurations:
   spicy: 1,
   armor: 1,
   spore: 1,
+  chain: 1,
   description: "Pæg is a versatile hero with 1 in every stat, making him a jack-of-all-trades but master of none."
 }
 ```
@@ -180,6 +186,69 @@ Here are some examples of hero configurations:
   tarot: true, // Can fetch tarot cards for special actions.
   fate: 1, // New stat for random buffs or debuffs
   description: "The Soothscribe's 'fate' stat allows him to randomly buff or debuff stats for all heroes, making him a master of unpredictability."
+}
+```
+
+### Example 10: Meatwalker
+
+```javascript
+{
+  name: "Meatwalker",
+  symbol: "₻",
+  attack: 7,
+  range: 1,
+  agility: 2,
+  hp: 22,
+  heal: 1, // Slight healing property.
+  meat: true, // Indicates meat-related interactions.
+  bulk: 1, // New bulk stat for Meatwalker
+  description: "Meatwalker's bulk stat allows him to raise a random stat every time he defeats an enemy, making him stronger with each victory."
+}
+```
+
+### Example 11: Shrink
+
+```javascript
+{
+  name: "Shrink",
+  symbol: "☊",
+  attack: 2,
+  range: 1,
+  agility: 3,
+  hp: 12,
+  shrink: true, // Indicates shrink-related behavior.
+  psych: 1, // New psych stat for Shrink.
+  description: "The Shrink uses his psychological expertise to boost ally stats, making him a valuable support hero."
+}
+```
+
+### Example 12: Kemetic
+
+```javascript
+{
+  name: "Kemetic",
+  symbol: "𓋇",
+  attack: 5,
+  range: 5,
+  agility: 5,
+  hp: 25,
+  ankh: 5, // The new ankh stat will cause boosts on hero deaths.
+  description: "Kemetic is a powerful hero with high attack, range, agility, and ankh stat, making him a formidable force on the battlefield."
+}
+```
+
+### Example 13: Greenjay
+
+```javascript
+{
+  name: "Greenjay",
+  symbol: "࿈",
+  attack: 5,
+  range: 2,
+  agility: 4,
+  hp: 30,
+  rise: 5, // New rise stat.
+  description: "Greenjay's rise stat allows him to revive with HP equal to the rise value, making him a resilient hero who can continue fighting even after falling."
 }
 ```
 
